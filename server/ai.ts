@@ -2,6 +2,12 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+// Helper to clean markdown code blocks from JSON responses
+function cleanJsonResponse(text: string): string {
+  // Remove markdown code blocks (```json ... ``` or ``` ... ```)
+  return text.replace(/```(?:json)?\s*\n?([\s\S]*?)\n?```/g, '$1').trim();
+}
+
 interface LessonPlanInput {
   subject: string;
   topic: string;
@@ -18,7 +24,7 @@ interface LessonPlanOutput {
 }
 
 export async function generateLessonPlan(input: LessonPlanInput): Promise<LessonPlanOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   const prompt = `Você é um assistente pedagógico especializado. Crie um plano de aula detalhado com base nas seguintes informações:
 
@@ -42,7 +48,8 @@ Responda apenas com o JSON, sem texto adicional.`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    const parsed = JSON.parse(text);
+    const cleanedText = cleanJsonResponse(text);
+    const parsed = JSON.parse(cleanedText);
 
     return {
       objectives: Array.isArray(parsed.objectives) ? parsed.objectives : [],
@@ -62,7 +69,7 @@ interface SentimentAnalysisOutput {
 }
 
 export async function analyzeSentiment(text: string): Promise<SentimentAnalysisOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   const prompt = `Analise o sentimento emocional da seguinte resposta de um aluno:
 
@@ -84,7 +91,8 @@ Responda apenas com o JSON, sem texto adicional.`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    const parsed = JSON.parse(text);
+    const cleanedText = cleanJsonResponse(text);
+    const parsed = JSON.parse(cleanedText);
 
     const validSentiments = ["positive", "neutral", "negative", "alert"];
     const sentiment = validSentiments.includes(parsed.sentiment)
@@ -112,7 +120,7 @@ export async function generateActivitySuggestions(
   gradeLevel: string,
   currentEngagement: number
 ): Promise<ActivitySuggestion[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
   const prompt = `Com base nas seguintes informações sobre uma turma:
 
@@ -134,7 +142,8 @@ Responda apenas com o JSON, sem texto adicional.`;
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    const parsed = JSON.parse(text);
+    const cleanedText = cleanJsonResponse(text);
+    const parsed = JSON.parse(cleanedText);
 
     if (!Array.isArray(parsed.suggestions)) {
       return [];
