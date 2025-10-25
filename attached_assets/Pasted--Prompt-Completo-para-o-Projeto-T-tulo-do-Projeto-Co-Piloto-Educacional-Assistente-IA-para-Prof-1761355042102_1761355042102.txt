@@ -1,0 +1,66 @@
+📝 Prompt Completo para o Projeto
+Título do Projeto: Co-Piloto Educacional – Assistente IA para Professores
+
+Descrição Geral: Crie uma plataforma web dinâmica, moderna e responsiva chamada Co-Piloto Educacional. O sistema deve atuar como um assistente inteligente para professores, oferecendo:
+
+Planos de aula personalizados com base na disciplina, faixa etária e objetivos pedagógicos.
+
+Insights de engajamento: análise de participação dos alunos, sugestões de atividades interativas e métricas de atenção.
+
+Feedback emocional: análise de sentimentos a partir de respostas ou interações dos alunos, ajudando o professor a identificar desmotivação, ansiedade ou entusiasmo.
+
+🎨 Estilo e Design
+Interface moderna, minimalista e responsiva (inspirada em dashboards educacionais).
+
+Paleta de cores suaves (azul, verde, branco) para transmitir confiança e clareza.
+
+Ícones e gráficos simples para visualização de dados.
+
+Layout em cards para organizar planos de aula, métricas e feedback.
+
+⚙️ Funcionalidades Principais
+Gerador de Planos de Aula
+
+Input: disciplina, tema, duração da aula, nível escolar.
+
+Output: plano estruturado (objetivos, atividades, recursos, avaliação).
+
+Insights de Engajamento
+
+Dashboard com métricas: participação, frequência, tempo de resposta em atividades.
+
+Sugestões automáticas de dinâmicas (ex.: quiz, debate, gamificação).
+
+Feedback Emocional
+
+Análise de linguagem dos alunos (respostas em texto ou formulários).
+
+Indicadores visuais (ex.: “Alerta de baixa motivação”).
+
+Recomendações de ações pedagógicas (ex.: atividades colaborativas, pausas criativas).
+
+Área do Professor
+
+Login seguro.
+
+Histórico de planos de aula.
+
+Relatórios exportáveis (PDF/Excel).
+
+🔧 Tecnologias sugeridas
+Frontend: React ou Next.js (interface dinâmica e moderna).
+
+Backend: Node.js + Express.
+
+Banco de Dados: PostgreSQL ou MongoDB.
+
+IA: integração com APIs de NLP (para análise de sentimentos e geração de planos).
+
+Estilo: TailwindCSS ou Material UI.
+
+🚀 Diferenciais
+Plataforma interativa e adaptativa.
+
+Foco em humanização do ensino (não só dados, mas insights emocionais).
+
+Possibilidade de expansão futura: integração com Google Classroom ou Microsoft Teams.
