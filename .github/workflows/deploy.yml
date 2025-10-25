@@ -25,7 +25,7 @@ jobs:
 
     - name: Build
       env:
-        VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        VITE_API_URL: https://educopilot-backend.onrender.com
       run: npm run build
 
     - name: Deploy to GitHub Pages
