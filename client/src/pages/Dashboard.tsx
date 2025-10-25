@@ -5,35 +5,11 @@ import ActivitySuggestionCard from "@/components/ActivitySuggestionCard";
 import { Users, Clock, TrendingUp, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import type { LessonPlan, StudentResponse } from "@shared/schema";
+import { Loader2 } from "lucide-react";
 
 // todo: remove mock functionality
-const mockLessonPlans = [
-  {
-    id: "1",
-    subject: "Matemática",
-    topic: "Introdução às Frações",
-    gradeLevel: "5º Ano",
-    duration: 50,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-  },
-  {
-    id: "2",
-    subject: "Ciências",
-    topic: "Ciclo da Água",
-    gradeLevel: "4º Ano",
-    duration: 45,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-  },
-  {
-    id: "3",
-    subject: "História",
-    topic: "Brasil Colonial",
-    gradeLevel: "7º Ano",
-    duration: 60,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
-  },
-];
-
 const mockEngagementData = [
   { day: 'Seg', participation: 85, responseTime: 12 },
   { day: 'Ter', participation: 78, responseTime: 15 },
@@ -58,6 +34,50 @@ const mockSuggestions = [
 ];
 
 export default function Dashboard() {
+  const { data: lessonPlans = [], isLoading: plansLoading } = useQuery<LessonPlan[]>({
+    queryKey: ["/api/lesson-plans"],
+  });
+
+  const { data: responses = [], isLoading: responsesLoading } = useQuery<StudentResponse[]>({
+    queryKey: ["/api/feedback"],
+  });
+
+  const handleView = (id: string) => {
+    const plan = lessonPlans.find(p => p.id === id);
+    if (plan) {
+      alert(`Plano de Aula: ${plan.topic}\n\nObjetivos:\n${plan.objectives.join('\n')}\n\nAtividades:\n${plan.activities.join('\n')}`);
+    }
+  };
+
+  const handleExport = (id: string) => {
+    const plan = lessonPlans.find(p => p.id === id);
+    if (plan) {
+      const content = `PLANO DE AULA\n\nDisciplina: ${plan.subject}\nTema: ${plan.topic}\nNível: ${plan.gradeLevel}\nDuração: ${plan.duration} minutos\n\nOBJETIVOS:\n${plan.objectives.map((o, i) => `${i + 1}. ${o}`).join('\n')}\n\nATIVIDADES:\n${plan.activities.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\nRECURSOS:\n${plan.resources.map((r, i) => `${i + 1}. ${r}`).join('\n')}\n\nAVALIAÇÃO:\n${plan.assessment}`;
+      
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `plano-aula-${plan.topic.toLowerCase().replace(/\s+/g, '-')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const alertCount = responses.filter(r => r.sentiment === "alert").length;
+  
+  const avgParticipation = mockEngagementData.reduce((sum, d) => sum + d.participation, 0) / mockEngagementData.length;
+
+  if (plansLoading || responsesLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
@@ -70,8 +90,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Taxa de Participação"
-          value="87%"
-          subtitle="34 de 39 alunos"
+          value={`${Math.round(avgParticipation)}%`}
+          subtitle="Média semanal"
           icon={Users}
           trend={{ value: 12, isPositive: true }}
         />
@@ -91,7 +111,7 @@ export default function Dashboard() {
         />
         <MetricCard
           title="Alertas Emocionais"
-          value="3"
+          value={alertCount}
           subtitle="Requerem atenção"
           icon={AlertCircle}
         />
@@ -108,16 +128,30 @@ export default function Dashboard() {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mockLessonPlans.slice(0, 2).map((plan) => (
-                <LessonPlanCard
-                  key={plan.id}
-                  {...plan}
-                  onView={(id) => console.log('View plan:', id)}
-                  onExport={(id) => console.log('Export plan:', id)}
-                />
-              ))}
-            </div>
+            {lessonPlans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {lessonPlans.slice(0, 2).map((plan) => (
+                  <LessonPlanCard
+                    key={plan.id}
+                    id={plan.id}
+                    subject={plan.subject}
+                    topic={plan.topic}
+                    gradeLevel={plan.gradeLevel}
+                    duration={plan.duration}
+                    createdAt={new Date(plan.createdAt)}
+                    onView={handleView}
+                    onExport={handleExport}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <p className="text-muted-foreground mb-4">Nenhum plano de aula criado ainda.</p>
+                <Link href="/generate">
+                  <Button>Criar Primeiro Plano</Button>
+                </Link>
+              </div>
+            )}
           </div>
 
           <EngagementChart data={mockEngagementData} title="Participação Semanal (%)" />

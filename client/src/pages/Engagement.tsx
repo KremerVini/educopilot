@@ -1,7 +1,12 @@
 import EngagementChart from "@/components/EngagementChart";
 import MetricCard from "@/components/MetricCard";
 import ActivitySuggestionCard from "@/components/ActivitySuggestionCard";
-import { Users, Clock, CheckCircle, TrendingUp } from "lucide-react";
+import { Users, Clock, CheckCircle, TrendingUp, Sparkles, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // todo: remove mock functionality
 const mockEngagementData = [
@@ -20,28 +25,42 @@ const mockResponseTimeData = [
   { day: 'Sex', participation: 9, responseTime: 9 },
 ];
 
-const mockSuggestions = [
-  {
-    title: "Pausas Criativas",
-    description: "Adicione intervalos de 5 minutos entre atividades para melhorar a concentração.",
-    category: "Pedagogia",
-    impact: "high" as const,
-  },
-  {
-    title: "Trabalho em Grupo",
-    description: "Organize atividades colaborativas para aumentar a participação dos alunos mais quietos.",
-    category: "Colaboração",
-    impact: "medium" as const,
-  },
-  {
-    title: "Feedback Visual",
-    description: "Use gráficos e imagens para reforçar conceitos abstratos.",
-    category: "Recursos Visuais",
-    impact: "medium" as const,
-  },
-];
+interface ActivitySuggestion {
+  title: string;
+  description: string;
+  category: string;
+  impact: "high" | "medium" | "low";
+}
 
 export default function Engagement() {
+  const [suggestions, setSuggestions] = useState<ActivitySuggestion[]>([]);
+  const { toast } = useToast();
+
+  const generateSuggestionsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/suggestions", {
+        subject: "Matemática",
+        gradeLevel: "5º Ano",
+        currentEngagement: 87,
+      });
+      return await res.json();
+    },
+    onSuccess: (data: ActivitySuggestion[]) => {
+      setSuggestions(data);
+      toast({
+        title: "Sugestões Geradas!",
+        description: "Novas atividades foram sugeridas pela IA.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao Gerar Sugestões",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -87,16 +106,43 @@ export default function Engagement() {
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Sugestões para Melhorar Engajamento</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockSuggestions.map((suggestion, index) => (
-            <ActivitySuggestionCard
-              key={index}
-              {...suggestion}
-              onAccept={() => console.log('Accepted:', suggestion.title)}
-            />
-          ))}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-semibold">Sugestões para Melhorar Engajamento</h2>
+          <Button
+            onClick={() => generateSuggestionsMutation.mutate()}
+            disabled={generateSuggestionsMutation.isPending}
+            data-testid="button-generate-suggestions"
+          >
+            {generateSuggestionsMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Gerar Novas Sugestões
+              </>
+            )}
+          </Button>
         </div>
+        {suggestions.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {suggestions.map((suggestion, index) => (
+              <ActivitySuggestionCard
+                key={index}
+                {...suggestion}
+                onAccept={() => console.log('Accepted:', suggestion.title)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground mb-4">
+              Clique no botão acima para gerar sugestões personalizadas com IA.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

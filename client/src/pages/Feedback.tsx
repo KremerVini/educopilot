@@ -1,6 +1,9 @@
 import StudentResponseCard from "@/components/StudentResponseCard";
 import SentimentBadge from "@/components/SentimentBadge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -8,76 +11,154 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Search, Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { StudentResponse } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type SentimentType = "positive" | "neutral" | "negative" | "alert";
-
-// todo: remove mock functionality
-const mockResponses = [
-  {
-    studentName: "Ana Silva",
-    responseText: "Adorei a aula de hoje! As atividades práticas com frações ficaram muito mais fáceis de entender quando usamos os exemplos do dia a dia. Consegui finalmente compreender como dividir uma pizza em partes iguais.",
-    sentiment: "positive" as SentimentType,
-    confidence: 92,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    studentName: "Bruno Costa",
-    responseText: "A aula estava ok, mas eu ainda tenho dúvidas sobre como somar frações com denominadores diferentes.",
-    sentiment: "neutral" as SentimentType,
-    confidence: 78,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    studentName: "Carla Mendes",
-    responseText: "Achei a aula muito difícil. Não consegui acompanhar a explicação e fiquei perdida na hora dos exercícios. Preciso de mais tempo para entender.",
-    sentiment: "negative" as SentimentType,
-    confidence: 85,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4),
-  },
-  {
-    studentName: "Diego Alves",
-    responseText: "Não estou gostando de matemática. Acho que nunca vou aprender isso direito.",
-    sentiment: "alert" as SentimentType,
-    confidence: 95,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
-  },
-  {
-    studentName: "Eduarda Lima",
-    responseText: "Gostei muito da atividade em grupo! Foi divertido trabalhar com meus colegas e trocar ideias sobre como resolver os problemas.",
-    sentiment: "positive" as SentimentType,
-    confidence: 89,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
-  },
-];
-
-const sentimentCounts = {
-  positive: mockResponses.filter(r => r.sentiment === "positive").length,
-  neutral: mockResponses.filter(r => r.sentiment === "neutral").length,
-  negative: mockResponses.filter(r => r.sentiment === "negative").length,
-  alert: mockResponses.filter(r => r.sentiment === "alert").length,
-};
 
 export default function Feedback() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSentiment, setFilterSentiment] = useState<string>("all");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [responseText, setResponseText] = useState("");
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const filteredResponses = mockResponses.filter((response) => {
+  const { data: responses = [], isLoading } = useQuery<StudentResponse[]>({
+    queryKey: ["/api/feedback"],
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async (data: { studentName: string; responseText: string }) => {
+      const res = await apiRequest("POST", "/api/feedback/analyze", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/feedback"] });
+      setIsDialogOpen(false);
+      setStudentName("");
+      setResponseText("");
+      toast({
+        title: "Feedback Analisado!",
+        description: "O sentimento foi analisado e salvo com sucesso.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao Analisar",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    analyzeMutation.mutate({ studentName, responseText });
+  };
+
+  const sentimentCounts = {
+    positive: responses.filter(r => r.sentiment === "positive").length,
+    neutral: responses.filter(r => r.sentiment === "neutral").length,
+    negative: responses.filter(r => r.sentiment === "negative").length,
+    alert: responses.filter(r => r.sentiment === "alert").length,
+  };
+
+  const filteredResponses = responses.filter((response) => {
     const matchesSearch = response.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       response.responseText.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSentiment = filterSentiment === "all" || response.sentiment === filterSentiment;
     return matchesSearch && matchesSentiment;
   });
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold mb-2">Feedback Emocional</h1>
-        <p className="text-muted-foreground">
-          Análise de sentimentos nas respostas dos alunos para identificar necessidades emocionais.
-        </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-4xl font-bold mb-2">Feedback Emocional</h1>
+          <p className="text-muted-foreground">
+            Análise de sentimentos nas respostas dos alunos para identificar necessidades emocionais.
+          </p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-feedback">
+              <Plus className="w-4 h-4 mr-2" />
+              Analisar Resposta
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Analisar Feedback de Aluno</DialogTitle>
+              <DialogDescription>
+                Digite a resposta do aluno e nossa IA analisará o sentimento emocional.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="studentName">Nome do Aluno</Label>
+                <Input
+                  id="studentName"
+                  placeholder="Ex: Ana Silva"
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  required
+                  data-testid="input-student-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="responseText">Resposta do Aluno</Label>
+                <Textarea
+                  id="responseText"
+                  placeholder="Digite a resposta ou feedback do aluno..."
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  rows={6}
+                  required
+                  data-testid="input-response-text"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={analyzeMutation.isPending}
+                data-testid="button-submit-analysis"
+              >
+                {analyzeMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analisando com IA...
+                  </>
+                ) : (
+                  "Analisar Sentimento"
+                )}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -137,16 +218,34 @@ export default function Feedback() {
       </div>
 
       <div className="space-y-4">
-        {filteredResponses.map((response, index) => (
-          <StudentResponseCard key={index} {...response} />
+        {filteredResponses.map((response) => (
+          <StudentResponseCard 
+            key={response.id}
+            studentName={response.studentName}
+            responseText={response.responseText}
+            sentiment={response.sentiment as SentimentType}
+            confidence={response.confidence}
+            createdAt={new Date(response.createdAt)}
+          />
         ))}
       </div>
 
-      {filteredResponses.length === 0 && (
+      {filteredResponses.length === 0 && responses.length > 0 && (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             Nenhum feedback encontrado com os filtros selecionados.
           </p>
+        </div>
+      )}
+
+      {responses.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">
+            Ainda não há feedbacks analisados.
+          </p>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            Adicionar Primeira Análise
+          </Button>
         </div>
       )}
     </div>
