@@ -1,8 +1,6 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// This is using OpenAI's API, which points to OpenAI's API servers and requires your own API key.
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 interface LessonPlanInput {
   subject: string;
@@ -20,6 +18,8 @@ interface LessonPlanOutput {
 }
 
 export async function generateLessonPlan(input: LessonPlanInput): Promise<LessonPlanOutput> {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
   const prompt = `Você é um assistente pedagógico especializado. Crie um plano de aula detalhado com base nas seguintes informações:
 
 Disciplina: ${input.subject}
@@ -34,31 +34,21 @@ Forneça um plano de aula estruturado em formato JSON com:
 - resources: array de 4-6 recursos e materiais necessários
 - assessment: texto descritivo de como avaliar o aprendizado dos alunos
 
-Seja específico, prático e alinhado com a BNCC (Base Nacional Comum Curricular).`;
+Seja específico, prático e alinhado com a BNCC (Base Nacional Comum Curricular).
+
+Responda apenas com o JSON, sem texto adicional.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em educação e planejamento pedagógico. Responda sempre em português do Brasil.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const parsed = JSON.parse(text);
 
-    const result = JSON.parse(response.choices[0].message.content || "{}");
-    
     return {
-      objectives: Array.isArray(result.objectives) ? result.objectives : [],
-      activities: Array.isArray(result.activities) ? result.activities : [],
-      resources: Array.isArray(result.resources) ? result.resources : [],
-      assessment: result.assessment || "",
+      objectives: Array.isArray(parsed.objectives) ? parsed.objectives : [],
+      activities: Array.isArray(parsed.activities) ? parsed.activities : [],
+      resources: Array.isArray(parsed.resources) ? parsed.resources : [],
+      assessment: parsed.assessment || "",
     };
   } catch (error) {
     console.error("Error generating lesson plan:", error);
@@ -72,6 +62,8 @@ interface SentimentAnalysisOutput {
 }
 
 export async function analyzeSentiment(text: string): Promise<SentimentAnalysisOutput> {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
   const prompt = `Analise o sentimento emocional da seguinte resposta de um aluno:
 
 "${text}"
@@ -84,33 +76,23 @@ Classifique o sentimento em uma das categorias:
 
 Forneça também um nível de confiança (0-100) na sua análise.
 
-Retorne JSON no formato: { "sentiment": "categoria", "confidence": número }`;
+Retorne JSON no formato: { "sentiment": "categoria", "confidence": número }
+
+Responda apenas com o JSON, sem texto adicional.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em análise de sentimentos educacionais. Responda sempre em JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const parsed = JSON.parse(text);
 
-    const result = JSON.parse(response.choices[0].message.content || "{}");
-    
     const validSentiments = ["positive", "neutral", "negative", "alert"];
-    const sentiment = validSentiments.includes(result.sentiment) 
-      ? result.sentiment 
+    const sentiment = validSentiments.includes(parsed.sentiment)
+      ? parsed.sentiment
       : "neutral";
-    
-    const confidence = Math.max(0, Math.min(100, Math.round(result.confidence || 50)));
-    
+
+    const confidence = Math.max(0, Math.min(100, Math.round(parsed.confidence || 50)));
+
     return { sentiment, confidence };
   } catch (error) {
     console.error("Error analyzing sentiment:", error);
@@ -130,6 +112,8 @@ export async function generateActivitySuggestions(
   gradeLevel: string,
   currentEngagement: number
 ): Promise<ActivitySuggestion[]> {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
   const prompt = `Com base nas seguintes informações sobre uma turma:
 
 Disciplina: ${subject}
@@ -142,31 +126,21 @@ Sugira 3 atividades pedagógicas inovadoras para melhorar o engajamento dos alun
 - category: categoria (Gamificação, Colaboração, Recursos Visuais, Pedagogia, etc.)
 - impact: nível de impacto esperado (high, medium, ou low)
 
-Retorne JSON no formato: { "suggestions": [array de objetos] }`;
+Retorne JSON no formato: { "suggestions": [array de objetos] }
+
+Responda apenas com o JSON, sem texto adicional.`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um consultor pedagógico especializado em engajamento estudantil. Responda em JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    const parsed = JSON.parse(text);
 
-    const result = JSON.parse(response.choices[0].message.content || "{}");
-    
-    if (!Array.isArray(result.suggestions)) {
+    if (!Array.isArray(parsed.suggestions)) {
       return [];
     }
-    
-    return result.suggestions.map((s: any) => ({
+
+    return parsed.suggestions.map((s: any) => ({
       title: s.title || "",
       description: s.description || "",
       category: s.category || "Pedagogia",
