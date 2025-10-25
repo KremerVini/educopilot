@@ -18,7 +18,7 @@ interface LessonPlanOutput {
 }
 
 export async function generateLessonPlan(input: LessonPlanInput): Promise<LessonPlanOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Você é um assistente pedagógico especializado. Crie um plano de aula detalhado com base nas seguintes informações:
 
@@ -62,7 +62,7 @@ interface SentimentAnalysisOutput {
 }
 
 export async function analyzeSentiment(text: string): Promise<SentimentAnalysisOutput> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Analise o sentimento emocional da seguinte resposta de um aluno:
 
@@ -112,7 +112,7 @@ export async function generateActivitySuggestions(
   gradeLevel: string,
   currentEngagement: number
 ): Promise<ActivitySuggestion[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Com base nas seguintes informações sobre uma turma:
 
